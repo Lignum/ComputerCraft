@@ -16,25 +16,21 @@ import dan200.computercraft.core.apis.ILuaAPI;
 import dan200.computercraft.core.computer.Computer;
 import dan200.computercraft.core.computer.IComputerEnvironment;
 import dan200.computercraft.shared.common.ServerTerminal;
-import dan200.computercraft.shared.network.ComputerCraftPacket;
-import dan200.computercraft.shared.network.messages.*;
-import dan200.computercraft.shared.util.NBTUtil;
-import io.netty.buffer.ByteBuf;
+import dan200.computercraft.shared.network.PacketHandler;
+import dan200.computercraft.shared.network.messages.ComputerDeleted;
+import dan200.computercraft.shared.network.messages.ComputerInteraction;
+import dan200.computercraft.shared.network.messages.ComputerState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.inventory.Container;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
-import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
 import java.io.InputStream;
 
 public class ServerComputer extends ServerTerminal
-    implements IComputer, IComputerEnvironment, IMessageHandler<ServerMessage, IMessage>
+    implements IComputer, IComputerEnvironment
 {
     private final int m_instanceID;
 
@@ -47,6 +43,8 @@ public class ServerComputer extends ServerTerminal
     private boolean m_changedLastFrame;
     private int m_ticksSincePing;
 
+    private int m_modemLightColour;
+
     public ServerComputer( World world, int computerID, String label, int instanceID, ComputerFamily family, int terminalWidth, int terminalHeight )
     {
         super( family != ComputerFamily.Normal, terminalWidth, terminalHeight );
@@ -57,7 +55,6 @@ public class ServerComputer extends ServerTerminal
 
         m_computer = new Computer( this, getTerminal(), computerID );
         m_computer.setLabel( label );
-        m_userData = null;
         m_changed = false;
 
         m_changedLastFrame = false;
@@ -124,14 +121,27 @@ public class ServerComputer extends ServerTerminal
 
     public void broadcastState()
     {
-        // Send state to client
-        
+        PacketHandler.INSTANCE.sendToAll( createState() );
+    }
+
+    public void sendState( EntityPlayerMP player )
+    {
+        PacketHandler.INSTANCE.sendTo( createState(), player );
     }
 
     public void broadcastDelete()
     {
-        // Send deletion to client
+        PacketHandler.INSTANCE.sendToAll( new ComputerDeleted( m_instanceID ) );
+    }
 
+    protected int getModemLightColour()
+    {
+        return m_modemLightColour;
+    }
+
+    protected void setModemLightColour( int modemLightColour )
+    {
+        m_modemLightColour = modemLightColour;
     }
 
     public IWritableMount getRootMount()
@@ -184,35 +194,30 @@ public class ServerComputer extends ServerTerminal
     @Override
     public void turnOn()
     {
-        // Turn on
         m_computer.turnOn();
     }
 
     @Override
     public void shutdown()
     {
-        // Shutdown
         m_computer.shutdown();
     }
 
     @Override
     public void reboot()
     {
-        // Reboot
         m_computer.reboot();
     }
 
     @Override
     public void queueEvent( String event )
     {
-        // Queue event
         queueEvent( event, null );
     }
 
     @Override
     public void queueEvent( String event, Object[] arguments )
     {
-        // Queue event
         m_computer.queueEvent( event, arguments );
     }
 
@@ -306,6 +311,11 @@ public class ServerComputer extends ServerTerminal
         return ComputerCraft.createUniqueNumberedSaveDir( m_world, "computer" );
     }
 
+    public void setChanged()
+    {
+        m_changed = true;
+    }
+
     // Networking stuff
 
     public ComputerState createState()
@@ -319,7 +329,7 @@ public class ServerComputer extends ServerTerminal
         );
     }
 
-    private IMessage handleComputerInteraction( ComputerInteraction ci, EntityPlayer sender )
+    public void handleComputerInteraction( ComputerInteraction ci, EntityPlayerMP sender )
     {
         switch(ci.getAction())
         {
@@ -343,56 +353,9 @@ public class ServerComputer extends ServerTerminal
             }
             case RequestComputerUpdate:
             {
-                return createState();
+                sendState( sender );
+                break;
             }
-        }
-
-        return null;
-    }
-
-    @Override
-    public IMessage onMessage( ServerMessage msg, MessageContext ctx )
-    {
-        EntityPlayerMP sender = ctx.getServerHandler().player;
-
-        // Allow Computer/Tile updates as they may happen at any time.
-        if(msg.isContainerNeeded())
-        {
-            if( sender == null )
-            {
-                return null;
-            }
-
-            Container container = sender.openContainer;
-            if( !(container instanceof IContainerComputer) )
-            {
-                return null;
-            }
-
-            IComputer computer = ((IContainerComputer) container).getComputer();
-            if( computer != this )
-            {
-                return null;
-            }
-        }
-
-        // Receive packets sent from the client to the server
-        if(msg instanceof ComputerInteraction)
-        {
-            return handleComputerInteraction( (ComputerInteraction) msg, sender );
-        }
-        else if( msg instanceof SetComputerLabel )
-        {
-            // A player wants to relabel a computer
-            setLabel( ((SetComputerLabel) msg).getLabel() );
-        }
-        else if( msg instanceof ComputerEvent )
-        {
-            ComputerEvent event = (ComputerEvent) msg;
-            Object[] arguments = event.getArguments().stream()
-                .map(x -> (Object) x)
-                .toArray();
-            queueEvent( event.getName(), arguments );
         }
     }
 }

@@ -7,5 +7,7 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
  */
 public interface ServerMessage extends IMessage
 {
+    int getTargetID();
+
     boolean isContainerNeeded();
 }

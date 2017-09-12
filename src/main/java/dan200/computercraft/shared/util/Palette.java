@@ -76,6 +76,32 @@ public class Palette implements IMessage
         };
     }
 
+    public NBTTagCompound writeToNBT( NBTTagCompound nbt )
+    {
+        int[] rgb8 = new int[colours.length];
+
+        for(int i = 0; i < colours.length; ++i)
+        {
+            rgb8[i] = encodeRGB8( colours[i] );
+        }
+
+        nbt.setIntArray( "term_palette", rgb8 );
+        return nbt;
+    }
+
+    public void readFromNBT( NBTTagCompound nbt )
+    {
+        if( !nbt.hasKey( "term_palette" ) ) return;
+        int[] rgb8 = nbt.getIntArray( "term_palette" );
+
+        if( rgb8.length != colours.length ) return;
+
+        for(int i = 0; i < colours.length; ++i)
+        {
+            colours[i] = decodeRGB8( rgb8[i] );
+        }
+    }
+
     @Override
     public void toBytes( ByteBuf buf )
     {

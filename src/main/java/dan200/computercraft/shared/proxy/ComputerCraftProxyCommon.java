@@ -12,13 +12,11 @@ import dan200.computercraft.api.pocket.IPocketUpgrade;
 import dan200.computercraft.core.computer.MainThread;
 import dan200.computercraft.shared.common.ColourableRecipe;
 import dan200.computercraft.shared.common.DefaultBundledRedstoneProvider;
-import dan200.computercraft.shared.common.TileGeneric;
 import dan200.computercraft.shared.computer.blocks.BlockCommandComputer;
 import dan200.computercraft.shared.computer.blocks.BlockComputer;
 import dan200.computercraft.shared.computer.blocks.TileCommandComputer;
 import dan200.computercraft.shared.computer.blocks.TileComputer;
 import dan200.computercraft.shared.computer.core.ComputerFamily;
-import dan200.computercraft.shared.computer.core.ServerComputer;
 import dan200.computercraft.shared.computer.inventory.ContainerComputer;
 import dan200.computercraft.shared.computer.items.ItemCommandComputer;
 import dan200.computercraft.shared.computer.items.ItemComputer;
@@ -30,7 +28,6 @@ import dan200.computercraft.shared.media.items.ItemPrintout;
 import dan200.computercraft.shared.media.items.ItemTreasureDisk;
 import dan200.computercraft.shared.media.recipes.DiskRecipe;
 import dan200.computercraft.shared.media.recipes.PrintoutRecipe;
-import dan200.computercraft.shared.network.ComputerCraftPacket;
 import dan200.computercraft.shared.peripheral.commandblock.CommandBlockPeripheralProvider;
 import dan200.computercraft.shared.peripheral.common.*;
 import dan200.computercraft.shared.peripheral.diskdrive.ContainerDiskDrive;
@@ -55,7 +52,6 @@ import dan200.computercraft.shared.util.*;
 import net.minecraft.block.Block;
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.Item;
@@ -63,9 +59,11 @@ import net.minecraft.item.ItemRecord;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.item.crafting.Ingredient;
-import net.minecraft.network.play.server.SPacketUpdateTileEntity;
 import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.*;
+import net.minecraft.util.EnumHand;
+import net.minecraft.util.NonNullList;
+import net.minecraft.util.ResourceLocation;
+import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.common.MinecraftForge;
@@ -167,66 +165,6 @@ public abstract class ComputerCraftProxyCommon implements IComputerCraftProxy
 
     @Override
     public abstract File getWorldDir( World world );
-
-    @Override
-    public void handlePacket( final ComputerCraftPacket packet, final EntityPlayer player )
-    {
-        IThreadListener listener = player.getServer();
-        if (listener != null)
-        {
-            if (listener.isCallingFromMinecraftThread())
-            {
-                processPacket( packet, player );
-            } else
-            {
-                listener.addScheduledTask( () -> processPacket( packet, player ) );
-            }
-        }
-    }
-
-    private void processPacket( ComputerCraftPacket packet, EntityPlayer player )
-    {
-        switch (packet.m_packetType)
-        {
-            ///////////////////////////////////
-            // Packets from Client to Server //
-            ///////////////////////////////////
-            case ComputerCraftPacket.TurnOn:
-            case ComputerCraftPacket.Shutdown:
-            case ComputerCraftPacket.Reboot:
-            case ComputerCraftPacket.QueueEvent:
-            case ComputerCraftPacket.RequestComputerUpdate:
-            case ComputerCraftPacket.SetLabel:
-            {
-                int instance = packet.m_dataInt[0];
-                ServerComputer computer = ComputerCraft.serverComputerRegistry.get( instance );
-                if (computer != null)
-                {
-                    computer.handlePacket( packet, player );
-                }
-                break;
-            }
-            case ComputerCraftPacket.RequestTileEntityUpdate:
-            {
-                int x = packet.m_dataInt[0];
-                int y = packet.m_dataInt[1];
-                int z = packet.m_dataInt[2];
-                BlockPos pos = new BlockPos( x, y, z );
-                World world = player.getEntityWorld();
-                TileEntity tileEntity = world.getTileEntity( pos );
-                if (tileEntity != null && tileEntity instanceof TileGeneric)
-                {
-                    TileGeneric generic = (TileGeneric) tileEntity;
-                    SPacketUpdateTileEntity description = generic.getUpdatePacket();
-                    if (description != null)
-                    {
-                        ((EntityPlayerMP) player).connection.sendPacket( description );
-                    }
-                }
-                break;
-            }
-        }
-    }
 
     @SubscribeEvent
     public void registerBlocks( RegistryEvent.Register<Block> event )

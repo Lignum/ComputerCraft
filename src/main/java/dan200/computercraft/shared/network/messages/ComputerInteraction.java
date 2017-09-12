@@ -50,6 +50,7 @@ public class ComputerInteraction implements ServerMessage
         this.action = action;
     }
 
+    @Override
     public int getTargetID()
     {
         return targetID;

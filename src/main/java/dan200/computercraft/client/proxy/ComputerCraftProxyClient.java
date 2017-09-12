@@ -11,13 +11,11 @@ import dan200.computercraft.client.gui.*;
 import dan200.computercraft.client.render.TileEntityMonitorRenderer;
 import dan200.computercraft.shared.computer.blocks.ComputerState;
 import dan200.computercraft.shared.computer.blocks.TileComputer;
-import dan200.computercraft.shared.computer.core.ClientComputer;
 import dan200.computercraft.shared.computer.core.ComputerFamily;
 import dan200.computercraft.shared.computer.items.ItemComputer;
 import dan200.computercraft.shared.media.inventory.ContainerHeldItem;
 import dan200.computercraft.shared.media.items.ItemDiskLegacy;
 import dan200.computercraft.shared.media.items.ItemPrintout;
-import dan200.computercraft.shared.network.ComputerCraftPacket;
 import dan200.computercraft.shared.peripheral.diskdrive.TileDiskDrive;
 import dan200.computercraft.shared.peripheral.monitor.TileMonitor;
 import dan200.computercraft.shared.peripheral.printer.TilePrinter;
@@ -40,7 +38,6 @@ import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumHand;
-import net.minecraft.util.IThreadListener;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.SoundEvent;
 import net.minecraft.util.math.BlockPos;
@@ -375,67 +372,6 @@ public class ComputerCraftProxyClient extends ComputerCraftProxyCommon
     public File getWorldDir( World world )
     {
         return world.getSaveHandler().getWorldDirectory();
-    }
-
-    @Override
-    public void handlePacket( final ComputerCraftPacket packet, final EntityPlayer player )
-    {
-        switch( packet.m_packetType )
-        {
-            case ComputerCraftPacket.ComputerChanged:
-            case ComputerCraftPacket.ComputerDeleted:
-            {
-                // Packet from Server to Client
-                IThreadListener listener = Minecraft.getMinecraft();
-                if( listener != null )
-                {
-                    if( listener.isCallingFromMinecraftThread() )
-                    {
-                        processPacket( packet, player );
-                    }
-                    else
-                    {
-                        listener.addScheduledTask( () -> processPacket( packet, player ) );
-                    }
-                }
-                break;
-            }
-            default:
-            {
-                // Packet from Client to Server
-                super.handlePacket( packet, player );
-                break;
-            }
-        }
-    }
-
-    private void processPacket( ComputerCraftPacket packet, EntityPlayer player )
-    {
-        switch( packet.m_packetType )
-        {
-            ///////////////////////////////////
-            // Packets from Server to Client //
-            ///////////////////////////////////
-            case ComputerCraftPacket.ComputerChanged:
-            {
-                int instanceID = packet.m_dataInt[ 0 ];
-                if( !ComputerCraft.clientComputerRegistry.contains( instanceID ) )
-                {
-                    ComputerCraft.clientComputerRegistry.add( instanceID, new ClientComputer( instanceID ) );
-                }
-                ComputerCraft.clientComputerRegistry.get( instanceID ).handlePacket( packet, player );
-                break;
-            }
-            case ComputerCraftPacket.ComputerDeleted:
-            {
-                int instanceID = packet.m_dataInt[ 0 ];
-                if( ComputerCraft.clientComputerRegistry.contains( instanceID ) )
-                {
-                    ComputerCraft.clientComputerRegistry.remove( instanceID );
-                }
-                break;
-            }
-        }
     }
 
     private void registerForgeHandlers()

@@ -1,5 +1,6 @@
 package dan200.computercraft.shared.network.messages;
 
+import dan200.computercraft.shared.common.ITerminal;
 import dan200.computercraft.shared.common.ServerTerminal;
 import io.netty.buffer.ByteBuf;
 
@@ -12,9 +13,9 @@ public class ComputerState implements ClientMessage
     private boolean on;
     private boolean blinking;
     private int modemLightColour;
-    private ServerTerminal terminal;
+    private ITerminal terminal;
 
-    public ComputerState( int targetID, String label, boolean on, boolean blinking, ServerTerminal terminal, int modemLightColour )
+    public ComputerState( int targetID, String label, boolean on, boolean blinking, ITerminal terminal, int modemLightColour )
     {
         this.targetID = targetID;
         this.label = label;
@@ -24,11 +25,12 @@ public class ComputerState implements ClientMessage
         this.modemLightColour = modemLightColour;
     }
 
-    public ComputerState( int targetID, String label, boolean on, boolean blinking, ServerTerminal terminal )
+    public ComputerState( int targetID, String label, boolean on, boolean blinking, ITerminal terminal )
     {
         this( targetID, label, on, blinking, terminal, 0 );
     }
 
+    @Override
     public int getTargetID()
     {
         return targetID;
@@ -54,11 +56,15 @@ public class ComputerState implements ClientMessage
         return modemLightColour;
     }
 
+    public ITerminal getTerminal()
+    {
+        return terminal;
+    }
+
     @Override
     public void fromBytes( ByteBuf buf )
     {
         targetID = buf.readInt();
-
         boolean hasLabel = buf.readBoolean();
         if( hasLabel )
         {

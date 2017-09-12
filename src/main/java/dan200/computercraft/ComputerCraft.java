@@ -32,7 +32,6 @@ import dan200.computercraft.shared.media.items.ItemDiskExpanded;
 import dan200.computercraft.shared.media.items.ItemDiskLegacy;
 import dan200.computercraft.shared.media.items.ItemPrintout;
 import dan200.computercraft.shared.media.items.ItemTreasureDisk;
-import dan200.computercraft.shared.network.ComputerCraftPacket;
 import dan200.computercraft.shared.network.PacketHandler;
 import dan200.computercraft.shared.peripheral.common.BlockCable;
 import dan200.computercraft.shared.peripheral.common.BlockPeripheral;
@@ -49,12 +48,9 @@ import dan200.computercraft.shared.turtle.blocks.BlockTurtle;
 import dan200.computercraft.shared.turtle.blocks.TileTurtle;
 import dan200.computercraft.shared.turtle.upgrades.*;
 import dan200.computercraft.shared.util.*;
-import io.netty.buffer.Unpooled;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketBuffer;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.EnumHand;
@@ -71,7 +67,6 @@ import net.minecraftforge.fml.common.SidedProxy;
 import net.minecraftforge.fml.common.event.*;
 import net.minecraftforge.fml.common.network.FMLEventChannel;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
-import net.minecraftforge.fml.common.network.internal.FMLProxyPacket;
 import net.minecraftforge.fml.relauncher.Side;
 import org.apache.commons.io.IOUtils;
 import org.apache.logging.log4j.Logger;
@@ -509,33 +504,6 @@ public class ComputerCraft
     public static File getWorldDir( World world )
     {
         return proxy.getWorldDir( world );
-    }
-
-    private static FMLProxyPacket encode( ComputerCraftPacket packet )
-    {
-        PacketBuffer buffer = new PacketBuffer( Unpooled.buffer() );
-        packet.toBytes( buffer );
-        return new FMLProxyPacket( buffer, "CC" );
-    }
-
-    public static void sendToPlayer( EntityPlayer player, ComputerCraftPacket packet )
-    {
-        networkEventChannel.sendTo( encode( packet ), (EntityPlayerMP)player );
-    }
-
-    public static void sendToAllPlayers( ComputerCraftPacket packet )
-    {
-        networkEventChannel.sendToAll( encode( packet ) );
-    }
-
-    public static void sendToServer( ComputerCraftPacket packet )
-    {
-        networkEventChannel.sendToServer( encode( packet ) );
-    }
-
-    public static void handlePacket( ComputerCraftPacket packet, EntityPlayer player )
-    {
-        proxy.handlePacket( packet, player );
     }
 
     public static boolean canPlayerUseCommands( EntityPlayer player )

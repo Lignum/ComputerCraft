@@ -465,11 +465,8 @@ public class ItemPocketComputer extends Item implements IComputerItem, IMedia, I
         ClientComputer computer = getClientComputer( stack );
         if( computer != null && computer.isOn() )
         {
-            NBTTagCompound computerNBT = computer.getUserData();
-            if( computerNBT != null && computerNBT.hasKey( "modemLight", Constants.NBT.TAG_ANY_NUMERIC ) )
-            {
-                return computerNBT.getInteger( "modemLight" );
-            }
+            // TODO: Make this work
+            return 0xFF0000;
         }
         return -1;
     }

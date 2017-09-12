@@ -54,34 +54,19 @@ public class PocketServerComputer extends ServerComputer implements IPocketAcces
     @Override
     public int getLight()
     {
-        NBTTagCompound tag = getUserData();
-        if( tag.hasKey( "modemLight", Constants.NBT.TAG_ANY_NUMERIC ) )
-        {
-            return tag.getInteger( "modemLight" );
-        }
-        else
-        {
-            return -1;
-        }
+        return getModemLightColour();
+    }
+
+    @Override
+    public int getModemLightColour()
+    {
+        return super.getModemLightColour();
     }
 
     @Override
     public void setLight( int colour )
     {
-        NBTTagCompound tag = getUserData();
-        if( colour >= 0 && colour <= 0xFFFFFF )
-        {
-            if( !tag.hasKey( "modemLight", Constants.NBT.TAG_ANY_NUMERIC ) || tag.getInteger( "modemLight" ) != colour )
-            {
-                tag.setInteger( "modemLight", colour );
-                updateUserData();
-            }
-        }
-        else if( tag.hasKey( "modemLight", Constants.NBT.TAG_ANY_NUMERIC ) )
-        {
-            tag.removeTag( "modemLight" );
-            updateUserData();
-        }
+        setModemLightColour( colour >= 0 && colour <= 0xFFFFFF ? colour : -1 );
     }
 
     @Nonnull

@@ -7,4 +7,5 @@ import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
  */
 public interface ClientMessage extends IMessage
 {
+    int getTargetID();
 }

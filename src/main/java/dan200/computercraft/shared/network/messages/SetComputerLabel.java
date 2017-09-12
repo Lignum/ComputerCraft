@@ -6,6 +6,7 @@ import java.nio.charset.Charset;
 
 public class SetComputerLabel implements ServerMessage
 {
+    private int targetID;
     private String label;
 
     public SetComputerLabel( String label )
@@ -19,8 +20,15 @@ public class SetComputerLabel implements ServerMessage
     }
 
     @Override
+    public int getTargetID()
+    {
+        return targetID;
+    }
+
+    @Override
     public void fromBytes( ByteBuf buf )
     {
+        targetID = buf.readInt();
         int length = buf.readInt();
         label = buf.readCharSequence( length, Charset.forName( "UTF-8" ) ).toString();
     }
@@ -28,6 +36,7 @@ public class SetComputerLabel implements ServerMessage
     @Override
     public void toBytes( ByteBuf buf )
     {
+        buf.writeInt( targetID );
         buf.writeInt( label.length() );
         buf.writeCharSequence( label, Charset.forName( "UTF-8" ) );
     }

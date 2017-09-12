@@ -7,7 +7,6 @@
 package dan200.computercraft.shared.proxy;
 
 import dan200.computercraft.shared.computer.blocks.TileComputer;
-import dan200.computercraft.shared.network.ComputerCraftPacket;
 import dan200.computercraft.shared.peripheral.diskdrive.TileDiskDrive;
 import dan200.computercraft.shared.peripheral.printer.TilePrinter;
 import dan200.computercraft.shared.turtle.blocks.TileTurtle;
@@ -44,5 +43,4 @@ public interface IComputerCraftProxy
     Object getPocketComputerGUI( EntityPlayer player, EnumHand hand );
 
     File getWorldDir( World world );
-    void handlePacket( ComputerCraftPacket packet, EntityPlayer player );
 }

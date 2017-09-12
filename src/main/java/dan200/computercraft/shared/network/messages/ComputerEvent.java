@@ -1,16 +1,22 @@
 package dan200.computercraft.shared.network.messages;
 
+import dan200.computercraft.shared.util.ObjectEncoder;
 import io.netty.buffer.ByteBuf;
 
 import java.nio.charset.Charset;
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
 
 public class ComputerEvent implements ServerMessage
 {
+    private int targetID;
     private String name;
-    private final List<String> arguments = new LinkedList<>();
+    private Object[] arguments;
+
+    public ComputerEvent( int targetID, String name, Object... args )
+    {
+        this.targetID = targetID;
+        this.name = name;
+        this.arguments = args;
+    }
 
     @Override
     public boolean isContainerNeeded()
@@ -18,46 +24,37 @@ public class ComputerEvent implements ServerMessage
         return true;
     }
 
+    @Override
+    public int getTargetID()
+    {
+        return targetID;
+    }
+
     public String getName()
     {
         return name;
     }
 
-    public List<String> getArguments()
+    public Object[] getArguments()
     {
-        return Collections.unmodifiableList( arguments );
+        return arguments;
     }
 
     @Override
     public void fromBytes( ByteBuf buf )
     {
+        targetID = buf.readInt();
         int nameLength = buf.readInt();
         name = buf.readCharSequence( nameLength, Charset.forName( "UTF-8" ) ).toString();
-
-        arguments.clear();
-
-        int argCount = buf.readInt();
-
-        for( int i = 0; i < argCount; ++i )
-        {
-            int argLength = buf.readInt();
-            String arg = buf.readCharSequence( argLength, Charset.forName( "UTF-8" ) ).toString();
-            arguments.add( arg );
-        }
+        arguments = ObjectEncoder.decodeObjects( buf );
     }
 
     @Override
     public void toBytes( ByteBuf buf )
     {
+        buf.writeInt( targetID );
         buf.writeInt( name.length() );
         buf.writeCharSequence( name, Charset.forName( "UTF-8" ) );
-
-        buf.writeInt( arguments.size() );
-
-        for( String arg : arguments )
-        {
-            buf.writeInt( arg.length() );
-            buf.writeCharSequence( arg, Charset.forName( "UTF-8" ) );
-        }
+        ObjectEncoder.encodeObjects( buf, arguments );
     }
 }

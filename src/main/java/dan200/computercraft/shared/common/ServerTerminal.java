@@ -87,11 +87,11 @@ public class ServerTerminal implements ITerminal
 
     public void toBytes( ByteBuf buf )
     {
+        buf.writeInt( m_terminal.getWidth() );
+        buf.writeInt( m_terminal.getHeight() );
         buf.writeBoolean( m_colour );
-
         boolean terminal = m_terminal != null;
         buf.writeBoolean( terminal );
-
         if( terminal )
         {
             m_terminal.toBytes( buf );

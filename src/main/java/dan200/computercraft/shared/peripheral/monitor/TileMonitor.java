@@ -217,7 +217,7 @@ public class TileMonitor extends TilePeripheralBase
         nbttagcompound.setInteger( "height", m_height );
         nbttagcompound.setInteger( "textScale", m_textScale );
         nbttagcompound.setInteger( "monitorDir", m_dir );
-        ((ServerTerminal)getLocalTerminal()).writeDescription( nbttagcompound );
+        //((ServerTerminal)getLocalTerminal()).writeDescription( nbttagcompound );
     }
 
     @Override
@@ -238,7 +238,8 @@ public class TileMonitor extends TilePeripheralBase
         m_height = nbttagcompound.getInteger( "height" );
         m_textScale = nbttagcompound.getInteger( "textScale" );
         m_dir = nbttagcompound.getInteger( "monitorDir" );
-        ((ClientTerminal)getLocalTerminal()).readDescription( nbttagcompound );
+        // TODO: Implement monitors
+        //((ClientTerminal)getLocalTerminal()).readDescription( nbttagcompound );
         m_changed = true;
 
         if( oldXIndex != m_xIndex || oldYIndex != m_yIndex ||

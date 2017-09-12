@@ -6,15 +6,11 @@
 
 package dan200.computercraft.shared.computer.core;
 
-import com.google.common.base.Objects;
-import dan200.computercraft.ComputerCraft;
 import dan200.computercraft.shared.common.ClientTerminal;
-import dan200.computercraft.shared.network.ComputerCraftPacket;
+import dan200.computercraft.shared.network.PacketHandler;
+import dan200.computercraft.shared.network.messages.ComputerEvent;
+import dan200.computercraft.shared.network.messages.ComputerInteraction;
 import dan200.computercraft.shared.network.messages.ComputerState;
-import dan200.computercraft.shared.network.messages.ClientMessage;
-import dan200.computercraft.shared.util.NBTUtil;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.nbt.NBTTagCompound;
 
 public class ClientComputer extends ClientTerminal
     implements IComputer
@@ -26,7 +22,7 @@ public class ClientComputer extends ClientTerminal
     private boolean m_on;
     private boolean m_blinking;
     private boolean m_changed;
-    private NBTTagCompound m_userData;
+    private int m_modemLightColour;
 
     private boolean m_changedLastFrame;
 
@@ -40,7 +36,6 @@ public class ClientComputer extends ClientTerminal
         m_on = false;
         m_blinking = false;
         m_changed = true;
-        m_userData = null;
         m_changedLastFrame = false;
     }
 
@@ -52,23 +47,24 @@ public class ClientComputer extends ClientTerminal
         m_changed = false;
     }
 
+    protected int getModemLightColour()
+    {
+        return m_modemLightColour;
+    }
+
+    public void setModemLightColour( int modemLightColour )
+    {
+        m_modemLightColour = modemLightColour;
+    }
+
     public boolean hasOutputChanged()
     {
         return m_changedLastFrame;
     }
 
-    public NBTTagCompound getUserData()
-    {
-        return m_userData;
-    }
-
     public void requestState()
     {
-        // Request state from server
-        ComputerCraftPacket packet = new ComputerCraftPacket();
-        packet.m_packetType = ComputerCraftPacket.RequestComputerUpdate;
-        packet.m_dataInt = new int[] { getInstanceID() };
-        ComputerCraft.sendToServer( packet );
+        interact( ComputerInteraction.ActionType.RequestComputerUpdate );
     }
 
     // IComputer
@@ -103,34 +99,27 @@ public class ClientComputer extends ClientTerminal
         return m_on && m_blinking;
     }
 
+    private void interact( ComputerInteraction.ActionType action )
+    {
+        PacketHandler.INSTANCE.sendToServer( new ComputerInteraction( m_computerID, action ) );
+    }
+
     @Override
     public void turnOn()
     {
-        // Send turnOn to server
-        ComputerCraftPacket packet = new ComputerCraftPacket();
-        packet.m_packetType = ComputerCraftPacket.TurnOn;
-        packet.m_dataInt = new int[] { m_instanceID };
-        ComputerCraft.sendToServer( packet );
+        interact( ComputerInteraction.ActionType.TurnOn );
     }
 
     @Override
     public void shutdown()
     {
-        // Send shutdown to server
-        ComputerCraftPacket packet = new ComputerCraftPacket();
-        packet.m_packetType = ComputerCraftPacket.Shutdown;
-        packet.m_dataInt = new int[] { m_instanceID };
-        ComputerCraft.sendToServer( packet );
+        interact( ComputerInteraction.ActionType.Shutdown );
     }
 
     @Override
     public void reboot()
     {
-        // Send reboot to server
-        ComputerCraftPacket packet = new ComputerCraftPacket();
-        packet.m_packetType = ComputerCraftPacket.Reboot;
-        packet.m_dataInt = new int[] { m_instanceID };
-        ComputerCraft.sendToServer( packet );
+        interact( ComputerInteraction.ActionType.Reboot );
     }
 
     @Override
@@ -142,53 +131,24 @@ public class ClientComputer extends ClientTerminal
     @Override
     public void queueEvent( String event, Object[] arguments )
     {
-        // Send event to server
-        ComputerCraftPacket packet = new ComputerCraftPacket();
-        packet.m_packetType = ComputerCraftPacket.QueueEvent;
-        packet.m_dataInt = new int[] { m_instanceID };
-        packet.m_dataString = new String[] { event };
-        if( arguments != null )
-        {
-            packet.m_dataNBT = NBTUtil.encodeObjects( arguments );
-        }
-        ComputerCraft.sendToServer( packet );
+        PacketHandler.INSTANCE.sendToServer( new ComputerEvent( m_computerID, event, arguments ) );
     }
 
-    @Override
-    public void readDescription( NBTTagCompound nbttagcompound )
+    public void syncState( ComputerState state )
     {
-        super.readDescription( nbttagcompound );
-
         int oldID = m_computerID;
         String oldLabel = m_label;
         boolean oldOn = m_on;
         boolean oldBlinking = m_blinking;
-        NBTTagCompound oldUserData = m_userData;
 
-        m_computerID = nbttagcompound.getInteger( "id" );
-        m_label = nbttagcompound.hasKey( "label" ) ? nbttagcompound.getString( "label" ) : null;
-        m_on = nbttagcompound.getBoolean( "on" );
-        m_blinking = nbttagcompound.getBoolean( "blinking" );
-        if( nbttagcompound.hasKey( "userData" ) )
-        {
-            m_userData = nbttagcompound.getCompoundTag( "userData" ).copy();
-        }
-        else
-        {
-            m_userData = null;
-        }
+        m_computerID = state.getTargetID();
+        m_label = state.getLabel();
+        m_on = state.isOn();
+        m_blinking = state.isBlinking();
 
-        if( m_computerID != oldID || m_on != oldOn || m_blinking != oldBlinking || !Objects.equal( m_label, oldLabel ) || !Objects.equal( m_userData, oldUserData ) )
+        if( m_computerID != oldID || m_on != oldOn || m_blinking != oldBlinking || !m_label.equals( oldLabel ) )
         {
             m_changed = true;
-        }
-    }
-
-    public void handlePacket( ClientMessage msg, EntityPlayer sender )
-    {
-        if( msg instanceof ComputerState )
-        {
-
         }
     }
 }
