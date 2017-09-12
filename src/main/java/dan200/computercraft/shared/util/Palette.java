@@ -1,8 +1,10 @@
 package dan200.computercraft.shared.util;
 
+import io.netty.buffer.ByteBuf;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 
-public class Palette
+public class Palette implements IMessage
 {
     private static final int PALETTE_SIZE = 16;
     private final double[][] colours = new double[PALETTE_SIZE][3];
@@ -74,29 +76,21 @@ public class Palette
         };
     }
 
-    public NBTTagCompound writeToNBT( NBTTagCompound nbt )
+    @Override
+    public void toBytes( ByteBuf buf )
     {
-        int[] rgb8 = new int[colours.length];
-
-        for(int i = 0; i < colours.length; ++i)
+        for( int i = 0; i < colours.length; ++i )
         {
-            rgb8[i] = encodeRGB8( colours[i] );
+            buf.writeInt( encodeRGB8( colours[i] ) );
         }
-
-        nbt.setIntArray( "term_palette", rgb8 );
-        return nbt;
     }
 
-    public void readFromNBT( NBTTagCompound nbt )
+    @Override
+    public void fromBytes( ByteBuf buf )
     {
-        if( !nbt.hasKey( "term_palette" ) ) return;
-        int[] rgb8 = nbt.getIntArray( "term_palette" );
-
-        if( rgb8.length != colours.length ) return;
-
-        for(int i = 0; i < colours.length; ++i)
+        for( int i = 0; i < colours.length; ++i )
         {
-            colours[i] = decodeRGB8( rgb8[i] );
+            colours[i] = decodeRGB8( buf.readInt() );
         }
     }
 }

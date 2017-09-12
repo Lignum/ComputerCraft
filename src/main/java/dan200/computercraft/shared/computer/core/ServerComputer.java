@@ -17,19 +17,24 @@ import dan200.computercraft.core.computer.Computer;
 import dan200.computercraft.core.computer.IComputerEnvironment;
 import dan200.computercraft.shared.common.ServerTerminal;
 import dan200.computercraft.shared.network.ComputerCraftPacket;
-import dan200.computercraft.shared.network.INetworkedThing;
+import dan200.computercraft.shared.network.messages.*;
 import dan200.computercraft.shared.util.NBTUtil;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.inventory.Container;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler;
+import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 
 import java.io.InputStream;
 
 public class ServerComputer extends ServerTerminal
-    implements IComputer, IComputerEnvironment, INetworkedThing
+    implements IComputer, IComputerEnvironment, IMessageHandler<ServerMessage, IMessage>
 {
     private final int m_instanceID;
 
@@ -37,7 +42,6 @@ public class ServerComputer extends ServerTerminal
     private BlockPos m_position;
 
     private final Computer m_computer;
-    private NBTTagCompound m_userData;
     private boolean m_changed;
 
     private boolean m_changedLastFrame;
@@ -118,49 +122,16 @@ public class ServerComputer extends ServerTerminal
         m_computer.unload();
     }
 
-    public NBTTagCompound getUserData()
-    {
-        if( m_userData == null )
-        {
-            m_userData = new NBTTagCompound();
-        }
-        return m_userData;
-    }
-
-    public void updateUserData()
-    {
-        m_changed = true;
-    }
-
     public void broadcastState()
     {
         // Send state to client
-        ComputerCraftPacket packet = new ComputerCraftPacket();
-        packet.m_packetType = ComputerCraftPacket.ComputerChanged;
-        packet.m_dataInt = new int[] { getInstanceID() };
-        packet.m_dataNBT = new NBTTagCompound();
-        writeDescription( packet.m_dataNBT );
-        ComputerCraft.sendToAllPlayers( packet );
-    }
-
-    public void sendState( EntityPlayer player )
-    {
-        // Send state to client
-        ComputerCraftPacket packet = new ComputerCraftPacket();
-        packet.m_packetType = ComputerCraftPacket.ComputerChanged;
-        packet.m_dataInt = new int[] { getInstanceID() };
-        packet.m_dataNBT = new NBTTagCompound();
-        writeDescription( packet.m_dataNBT );
-        ComputerCraft.sendToPlayer( player, packet );
+        
     }
 
     public void broadcastDelete()
     {
         // Send deletion to client
-        ComputerCraftPacket packet = new ComputerCraftPacket();
-        packet.m_packetType = ComputerCraftPacket.ComputerDeleted;
-        packet.m_dataInt = new int[] { getInstanceID() };
-        ComputerCraft.sendToAllPlayers( packet );
+
     }
 
     public IWritableMount getRootMount()
@@ -337,87 +308,91 @@ public class ServerComputer extends ServerTerminal
 
     // Networking stuff
 
-    @Override
-    public void writeDescription( NBTTagCompound nbttagcompound )
+    public ComputerState createState()
     {
-        super.writeDescription( nbttagcompound );
-
-        nbttagcompound.setInteger( "id", m_computer.getID() );
-        String label = m_computer.getLabel();
-        if( label != null )
-        {
-            nbttagcompound.setString( "label", label );
-        }
-        nbttagcompound.setBoolean( "on", m_computer.isOn() );
-        nbttagcompound.setBoolean( "blinking", m_computer.isBlinking() );
-        if( m_userData != null )
-        {
-            nbttagcompound.setTag( "userData", m_userData.copy() );
-        }
+        return new ComputerState(
+            m_computer.getID(),
+            m_computer.getLabel(),
+            m_computer.isOn(),
+            m_computer.isBlinking(),
+            this
+        );
     }
 
-    // INetworkedThing
-
-    @Override
-    public void handlePacket( ComputerCraftPacket packet, EntityPlayer sender )
+    private IMessage handleComputerInteraction( ComputerInteraction ci, EntityPlayer sender )
     {
-        // Allow Computer/Tile updates as they may happen at any time.
-        if (packet.requiresContainer()) {
-            if (sender == null) return;
-
-            Container container = sender.openContainer;
-            if (!(container instanceof IContainerComputer)) return;
-
-            IComputer computer = ((IContainerComputer) container).getComputer();
-            if (computer != this) return;
-        }
-
-        // Receive packets sent from the client to the server
-        switch( packet.m_packetType )
+        switch(ci.getAction())
         {
-            case ComputerCraftPacket.TurnOn:
+            case TurnOn:
             {
                 // A player has turned the computer on
                 turnOn();
                 break;
             }
-            case ComputerCraftPacket.Reboot:
+            case Reboot:
             {
                 // A player has held down ctrl+r
                 reboot();
                 break;
             }
-            case ComputerCraftPacket.Shutdown:
+            case Shutdown:
             {
                 // A player has held down ctrl+s
                 shutdown();
                 break;
             }
-            case ComputerCraftPacket.QueueEvent:
+            case RequestComputerUpdate:
             {
-                // A player has caused a UI event to be fired
-                String event = packet.m_dataString[0];
-                Object[] arguments = null;
-                if( packet.m_dataNBT != null )
-                {
-                    arguments = NBTUtil.decodeObjects( packet.m_dataNBT );
-                }
-                queueEvent( event, arguments );
-                break;
+                return createState();
             }
-            case ComputerCraftPacket.SetLabel:
+        }
+
+        return null;
+    }
+
+    @Override
+    public IMessage onMessage( ServerMessage msg, MessageContext ctx )
+    {
+        EntityPlayerMP sender = ctx.getServerHandler().player;
+
+        // Allow Computer/Tile updates as they may happen at any time.
+        if(msg.isContainerNeeded())
+        {
+            if( sender == null )
             {
-                // A player wants to relabel a computer
-                String label = (packet.m_dataString != null && packet.m_dataString.length >= 1) ? packet.m_dataString[0] : null;
-                setLabel( label );
-                break;
+                return null;
             }
-            case ComputerCraftPacket.RequestComputerUpdate:
+
+            Container container = sender.openContainer;
+            if( !(container instanceof IContainerComputer) )
             {
-                // A player asked for an update on the state of the terminal
-                sendState( sender );
-                break;
+                return null;
             }
+
+            IComputer computer = ((IContainerComputer) container).getComputer();
+            if( computer != this )
+            {
+                return null;
+            }
+        }
+
+        // Receive packets sent from the client to the server
+        if(msg instanceof ComputerInteraction)
+        {
+            return handleComputerInteraction( (ComputerInteraction) msg, sender );
+        }
+        else if( msg instanceof SetComputerLabel )
+        {
+            // A player wants to relabel a computer
+            setLabel( ((SetComputerLabel) msg).getLabel() );
+        }
+        else if( msg instanceof ComputerEvent )
+        {
+            ComputerEvent event = (ComputerEvent) msg;
+            Object[] arguments = event.getArguments().stream()
+                .map(x -> (Object) x)
+                .toArray();
+            queueEvent( event.getName(), arguments );
         }
     }
 }

@@ -10,13 +10,14 @@ import com.google.common.base.Objects;
 import dan200.computercraft.ComputerCraft;
 import dan200.computercraft.shared.common.ClientTerminal;
 import dan200.computercraft.shared.network.ComputerCraftPacket;
-import dan200.computercraft.shared.network.INetworkedThing;
+import dan200.computercraft.shared.network.messages.ComputerState;
+import dan200.computercraft.shared.network.messages.ClientMessage;
 import dan200.computercraft.shared.util.NBTUtil;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 
 public class ClientComputer extends ClientTerminal
-    implements IComputer, INetworkedThing
+    implements IComputer
 {
     private final int m_instanceID;
 
@@ -183,16 +184,11 @@ public class ClientComputer extends ClientTerminal
         }
     }
 
-    @Override
-    public void handlePacket( ComputerCraftPacket packet, EntityPlayer sender )
+    public void handlePacket( ClientMessage msg, EntityPlayer sender )
     {
-        switch( packet.m_packetType )
+        if( msg instanceof ComputerState )
         {
-            case ComputerCraftPacket.ComputerChanged:
-            {
-                readDescription( packet.m_dataNBT );
-                break;
-            }
+
         }
     }
 }

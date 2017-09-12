@@ -128,7 +128,7 @@ public class TilePrinter extends TilePeripheralBase
         {
             nbttagcompound.setBoolean( "printing", m_printing );
             nbttagcompound.setString( "pageTitle", m_pageTitle );
-            m_page.writeToNBT( nbttagcompound );
+            m_page.toBytes( nbttagcompound );
         }
         
         // Write inventory

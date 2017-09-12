@@ -6,9 +6,13 @@
 
 package dan200.computercraft.core.terminal;
 import dan200.computercraft.shared.util.Palette;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraftforge.fml.common.network.simpleimpl.IMessage;
 
-public class Terminal
+import java.nio.charset.Charset;
+
+public class Terminal implements IMessage
 {    
     private static final String base16 = "0123456789abcdef";
 
@@ -318,55 +322,52 @@ public class Terminal
         m_changed = false;
     }
 
-    public NBTTagCompound writeToNBT( NBTTagCompound nbttagcompound )
+    @Override
+    public void toBytes( ByteBuf buf )
     {
-        nbttagcompound.setInteger( "term_cursorX", m_cursorX );
-        nbttagcompound.setInteger( "term_cursorY", m_cursorY );
-        nbttagcompound.setBoolean( "term_cursorBlink", m_cursorBlink );
-        nbttagcompound.setInteger( "term_textColour", m_cursorColour );
-        nbttagcompound.setInteger( "term_bgColour", m_cursorBackgroundColour );
+        buf.writeInt( m_cursorX );
+        buf.writeInt( m_cursorY );
+        buf.writeBoolean( m_cursorBlink );
+        buf.writeInt( m_cursorColour );
+        buf.writeInt( m_cursorBackgroundColour );
+        buf.writeInt( m_width );
+        buf.writeInt( m_height );
         for( int n=0; n<m_height; ++n )
         {
-            nbttagcompound.setString( "term_text_" + n, m_text[n].toString() );
-            nbttagcompound.setString( "term_textColour_" + n, m_textColour[n].toString() );
-            nbttagcompound.setString( "term_textBgColour_" + n, m_backgroundColour[ n ].toString() );
+            final Charset ascii = Charset.forName( "US-ASCII" );
+            buf.writeCharSequence( m_text[n].toString(), ascii );
+            buf.writeCharSequence( m_textColour[n].toString(), ascii );
+            buf.writeCharSequence( m_backgroundColour[n].toString(), ascii );
         }
-        if(m_palette != null)
+        boolean palette = m_palette != null;
+        buf.writeBoolean( palette );
+        if( palette )
         {
-            m_palette.writeToNBT( nbttagcompound );
+            m_palette.toBytes( buf );
         }
-        return nbttagcompound;
     }
 
-    public void readFromNBT( NBTTagCompound nbttagcompound )
+    @Override
+    public void fromBytes( ByteBuf buf )
     {
-        m_cursorX = nbttagcompound.getInteger( "term_cursorX" );
-        m_cursorY = nbttagcompound.getInteger( "term_cursorY" );
-        m_cursorBlink = nbttagcompound.getBoolean( "term_cursorBlink" );
-        m_cursorColour = nbttagcompound.getInteger( "term_textColour" );
-        m_cursorBackgroundColour = nbttagcompound.getInteger( "term_bgColour" );
-
+        m_cursorX = buf.readInt();
+        m_cursorY = buf.readInt();
+        m_cursorBlink = buf.readBoolean();
+        m_cursorColour = buf.readInt();
+        m_cursorBackgroundColour = buf.readInt();
+        m_width = buf.readInt();
+        m_height = buf.readInt();
         for( int n=0; n<m_height; ++n )
         {
-            m_text[n].fill( ' ' );
-            if( nbttagcompound.hasKey( "term_text_" + n ) )
-            {
-                m_text[n].write( nbttagcompound.getString( "term_text_" + n ) );
-            }
-            m_textColour[n].fill( base16.charAt( m_cursorColour ) );
-            if( nbttagcompound.hasKey( "term_textColour_" + n ) )
-            {
-                m_textColour[n].write( nbttagcompound.getString( "term_textColour_" + n ) );
-            }
-            m_backgroundColour[n].fill( base16.charAt( m_cursorBackgroundColour ) );
-            if( nbttagcompound.hasKey( "term_textBgColour_" + n ) )
-            {
-                m_backgroundColour[n].write( nbttagcompound.getString( "term_textBgColour_" + n ) );
-            }
+            final Charset ascii = Charset.forName( "US-ASCII" );
+            m_text[n].write( buf.readCharSequence( m_width, ascii ).toString() );
+            m_textColour[n].write( buf.readCharSequence( m_width, ascii ).toString() );
+            m_backgroundColour[n].write( buf.readCharSequence( m_width, ascii ).toString() );
         }
-        if (m_palette != null)
+        boolean palette = buf.readBoolean();
+        if( palette && m_palette != null )
         {
-            m_palette.readFromNBT( nbttagcompound );
+            m_palette.fromBytes( buf );
         }
         m_changed = true;
     }
