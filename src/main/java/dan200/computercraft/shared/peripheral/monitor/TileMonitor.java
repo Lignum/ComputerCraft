@@ -9,6 +9,7 @@ package dan200.computercraft.shared.peripheral.monitor;
 import dan200.computercraft.ComputerCraft;
 import dan200.computercraft.api.peripheral.IComputerAccess;
 import dan200.computercraft.api.peripheral.IPeripheral;
+import dan200.computercraft.client.render.TerminalRenderer;
 import dan200.computercraft.core.terminal.Terminal;
 import dan200.computercraft.shared.common.ClientTerminal;
 import dan200.computercraft.shared.common.ITerminal;
@@ -48,7 +49,7 @@ public class TileMonitor extends TilePeripheralBase
     private final Set<IComputerAccess> m_computers;
 
     public long m_lastRenderFrame = -1; // For rendering use only
-    public int m_renderDisplayList = -1; // For rendering use only
+    public TerminalRenderer m_renderer = null; // For rendering use only
 
     private boolean m_destroyed;
     private boolean m_ignoreMe;
@@ -91,10 +92,9 @@ public class TileMonitor extends TilePeripheralBase
                 contractNeighbours();
             }
         }
-        if( m_renderDisplayList >= 0 )
+        if( m_renderer != null )
         {
-            ComputerCraft.deleteDisplayLists( m_renderDisplayList, 3 );
-            m_renderDisplayList = -1;
+            m_renderer.close();
         }
     }
 
