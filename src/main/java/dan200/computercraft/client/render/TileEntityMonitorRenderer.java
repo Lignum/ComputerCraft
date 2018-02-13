@@ -61,7 +61,8 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
             origin.m_lastRenderFrame = renderFrame;
         }
 
-        boolean redraw = origin.pollChanged();
+        final Minecraft mc = Minecraft.getMinecraft();
+
         BlockPos monitorPos = monitor.getPos();
         BlockPos originPos = origin.getPos();
         posX += originPos.getX() - monitorPos.getX();
@@ -71,8 +72,11 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
         // Determine orientation
         EnumFacing dir = origin.getDirection();
         EnumFacing front = origin.getFront();
-        float yaw = DirectionUtil.toYawAngle( dir );
-        float pitch = DirectionUtil.toPitchAngle( front );
+        final float yaw = DirectionUtil.toYawAngle( dir );
+        final float pitch = DirectionUtil.toPitchAngle( front );
+
+        final double xSize = (double)origin.getWidth() - 2.0 * ( TileMonitor.RENDER_MARGIN + TileMonitor.RENDER_BORDER );
+        final double ySize = (double)origin.getHeight() - 2.0 * ( TileMonitor.RENDER_MARGIN + TileMonitor.RENDER_BORDER );
 
         ITerminal term = origin.getTerminal();
         if( term == null || !(term instanceof ClientTerminal) )
@@ -93,6 +97,37 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
             origin.m_renderer = new TerminalRenderer( terminal );
         }
 
-        origin.m_renderer.renderTerminal( posX, posY, posZ, yaw, pitch );
+        if( origin.pollChanged() )
+        {
+            origin.m_renderer.refreshTerminalBuffer();
+        }
+
+        GlStateManager.pushMatrix();
+        GlStateManager.translate( posX + 0.5, posY + 0.5, posZ + 0.5 );
+        GlStateManager.rotate( -yaw, 0.0f, 1.0f, 0.0f );
+        GlStateManager.rotate( pitch, 1.0f, 0.0f, 0.0f );
+        GlStateManager.translate(
+            -0.5 + TileMonitor.RENDER_BORDER + TileMonitor.RENDER_MARGIN,
+            ((double)origin.getHeight() - 0.5) - (TileMonitor.RENDER_BORDER + TileMonitor.RENDER_MARGIN),
+            0.5
+        );
+
+        final int width = terminal.getWidth();
+        final int height = terminal.getHeight();
+
+        final double xScale = xSize / (double)width;
+        final double yScale = ySize / (double)height;
+
+        GlStateManager.scale( xScale, -yScale, 1.0 );
+
+        GlStateManager.disableLighting();
+        mc.entityRenderer.disableLightmap();
+
+        origin.m_renderer.renderTerminal();
+
+        mc.entityRenderer.enableLightmap();
+        GlStateManager.enableLighting();
+
+        GlStateManager.popMatrix();
     }
 }

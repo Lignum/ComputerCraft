@@ -17,6 +17,7 @@ public class TerminalRenderer implements Closeable
 {
     private final Terminal m_terminal;
     private final int m_vertexBuffer;
+    private boolean m_closed = false;
 
     public TerminalRenderer( Terminal terminal )
     {
@@ -38,7 +39,7 @@ public class TerminalRenderer implements Closeable
         double[] rgb = terminal.getPalette().getColour( colour );
         float[] frgb = new float[ rgb.length ];
 
-        for ( int i = 0; i < rgb.length; ++i )
+        for( int i = 0; i < rgb.length; ++i )
         {
             frgb[i] = (float) rgb[i];
         }
@@ -46,7 +47,7 @@ public class TerminalRenderer implements Closeable
         return frgb;
     }
 
-    private static final int VERTEX_SIZE = 8 * 4; // x, y, z, u, v, r, g, b
+    private static final int VERTEX_SIZE = 7 * 4; // x, y, u, v, r, g, b
     private final static int VERTICES_PER_PIXEL = 6;
 
     private FloatBuffer buildTerminalBuffer()
@@ -63,18 +64,12 @@ public class TerminalRenderer implements Closeable
             for ( int x = 0; x < m_terminal.getWidth(); ++x )
             {
                 float[] bgColour = getRowColour( m_terminal, rowBg, x );
-                // Top left
-                buffer.put( (float)x ).put( (float)y ).put( 0.0f ).put( 0.0f ).put( 0.0f ).put( bgColour );
-                // Top right
-                buffer.put( (float)x + 1.0f ).put( (float)y ).put( 0.0f ).put( 0.0f ).put( 0.0f ).put( bgColour );
-                // Bottom left
-                buffer.put( (float)x ).put( (float)y + 1.0f ).put( 0.0f ).put( 0.0f ).put( 0.0f ).put( bgColour );
-                // Top right
-                buffer.put( (float)x + 1.0f ).put( (float)y ).put( 0.0f ).put( 0.0f ).put( 0.0f ).put( bgColour );
-                // Bottom right
-                buffer.put( (float)x + 1.0f ).put( (float)y + 1.0f ).put( 0.0f ).put( 0.0f ).put( 0.0f ).put( bgColour );
-                // Bottom left
-                buffer.put( (float)x ).put( (float)y + 1.0f ).put( 0.0f ).put( 0.0f ).put( 0.0f ).put( bgColour );
+                buffer.put( (float)x ).put( (float)y ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Top left
+                buffer.put( (float)x ).put( (float)y + 1.0f ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Bottom left
+                buffer.put( (float)x + 1.0f ).put( (float)y ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Top right
+                buffer.put( (float)x + 1.0f ).put( (float)y ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Top right
+                buffer.put( (float)x ).put( (float)y + 1.0f ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Bottom left
+                buffer.put( (float)x + 1.0f ).put( (float)y + 1.0f ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Bottom right
             }
         }
 
@@ -82,8 +77,13 @@ public class TerminalRenderer implements Closeable
         return buffer;
     }
 
-    private void refreshTerminalBuffer()
+    public void refreshTerminalBuffer()
     {
+        if( m_closed )
+        {
+            return;
+        }
+
         uploadTerminalBuffer( buildTerminalBuffer() );
     }
 
@@ -92,13 +92,13 @@ public class TerminalRenderer implements Closeable
         glBindBuffer( GL_ARRAY_BUFFER, m_vertexBuffer );
 
         glEnableClientState( GL_VERTEX_ARRAY );
-        glVertexPointer( 3, GL_FLOAT, VERTEX_SIZE, 0L );
+        glVertexPointer( 2, GL_FLOAT, VERTEX_SIZE, 0L );
 
         glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-        glTexCoordPointer( 2, GL_FLOAT, VERTEX_SIZE, 3 * 4L );
+        glTexCoordPointer( 2, GL_FLOAT, VERTEX_SIZE, 2 * 4L );
 
         glEnableClientState( GL_COLOR_ARRAY );
-        glColorPointer( 3, GL_FLOAT, VERTEX_SIZE, (3 + 2) * 4L );
+        glColorPointer( 3, GL_FLOAT, VERTEX_SIZE, (2 + 2) * 4L );
     }
 
     private void destroyClientState()
@@ -110,8 +110,13 @@ public class TerminalRenderer implements Closeable
         glBindBuffer( GL_ARRAY_BUFFER, 0 );
     }
 
-    public void renderTerminal( double posX, double posY, double posZ, float yaw, float pitch )
+    public void renderTerminal()
     {
+        if( m_closed )
+        {
+            return;
+        }
+
         final Minecraft mc = Minecraft.getMinecraft();
 
         if( m_terminal.getChanged() )
@@ -120,29 +125,18 @@ public class TerminalRenderer implements Closeable
             m_terminal.clearChanged();
         }
 
-        GlStateManager.pushMatrix();
-        GlStateManager.translate( posX, posY, posZ );
-        GlStateManager.rotate( -yaw, 0.0f, 1.0f, 0.0f );
-        GlStateManager.rotate( pitch, 1.0f, 0.0f, 0.0f );
-
-        GlStateManager.disableLighting();
-        mc.entityRenderer.disableLightmap();
         setupClientState();
-
         {
             mc.getTextureManager().bindTexture( FixedWidthFontRenderer.background );
             glDrawArrays( GL_TRIANGLES, 0, VERTICES_PER_PIXEL * m_terminal.getWidth() * m_terminal.getHeight() );
         }
         destroyClientState();
-        mc.entityRenderer.enableLightmap();
-        GlStateManager.enableLighting();
-
-        GlStateManager.popMatrix();
     }
 
     @Override
     public void close()
     {
         glDeleteBuffers( m_vertexBuffer );
+        m_closed = true;
     }
 }
