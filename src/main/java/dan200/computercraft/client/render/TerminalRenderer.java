@@ -19,6 +19,7 @@ public class TerminalRenderer implements Closeable
     private final int m_vertexBuffer;
     private double m_xScale, m_yScale;
     private boolean m_closed = false;
+    private int m_vertexCount = 0;
 
     public TerminalRenderer( Terminal terminal, double xScale, double yScale )
     {
@@ -48,26 +49,55 @@ public class TerminalRenderer implements Closeable
         return frgb;
     }
 
-    private void addRectangle( FloatBuffer buffer, float x, float y, float w, float h, float[] colour, float ua, float va, float ub, float vb )
+    private void addRectangle( FloatBuffer buffer, float x, float y, float z, float w, float h, float[] colour, float ua, float va, float ub, float vb )
     {
         final float xa = x;
         final float ya = y;
         final float xb = xa + w;
         final float yb = ya + h;
 
-        buffer.put( xa ).put( ya ).put( ua ).put( va ).put( colour ); // Top left
-        buffer.put( xa ).put( yb ).put( ua ).put( vb ).put( colour ); // Bottom left
-        buffer.put( xb ).put( ya ).put( ub ).put( va ).put( colour ); // Top right
-        buffer.put( xb ).put( ya ).put( ub ).put( va ).put( colour ); // Top right
-        buffer.put( xa ).put( yb ).put( ua ).put( vb ).put( colour ); // Bottom left
-        buffer.put( xb ).put( yb ).put( ub ).put( vb ).put( colour ); // Bottom right
+        buffer.put( xa ).put( ya ).put( z ).put( ua ).put( va ).put( colour ); // Top left
+        buffer.put( xa ).put( yb ).put( z ).put( ua ).put( vb ).put( colour ); // Bottom left
+        buffer.put( xb ).put( ya ).put( z ).put( ub ).put( va ).put( colour ); // Top right
+        buffer.put( xb ).put( ya ).put( z ).put( ub ).put( va ).put( colour ); // Top right
+        buffer.put( xa ).put( yb ).put( z ).put( ua ).put( vb ).put( colour ); // Bottom left
+        buffer.put( xb ).put( yb ).put( z ).put( ub ).put( vb ).put( colour ); // Bottom right
+
+        m_vertexCount += 6;
     }
 
-    private static final int VERTEX_SIZE = 7 * 4; // x, y, u, v, r, g, b
+    private static int getCharU( char c )
+    {
+        return 1 + (int)c % 16 * (FixedWidthFontRenderer.FONT_WIDTH + 2);
+    }
+
+    private static int getCharV( char c )
+    {
+        return 1 + (int)c / 16 * (FixedWidthFontRenderer.FONT_HEIGHT + 2);
+    }
+
+    private void addCharacter( FloatBuffer buffer, float x, float y, float z, float w, float h, float[] colour, char c )
+    {
+        if( Character.isSpaceChar( c ) )
+        {
+            return;
+        }
+
+        final int ua = getCharU( c );
+        final int va = getCharV( c );
+        final int ub = ua + FixedWidthFontRenderer.FONT_WIDTH;
+        final int vb = va + FixedWidthFontRenderer.FONT_HEIGHT;
+
+        addRectangle( buffer, x, y, z, w, h, colour, ua / 256.0f, va / 256.0f, ub / 256.0f, vb / 256.0f );
+    }
+
+    private static final int VERTEX_SIZE = 8 * 4; // x, y, z, u, v, r, g, b
     private static final int VERTICES_PER_PIXEL = 6;
 
     private FloatBuffer buildTerminalBuffer()
     {
+        m_vertexCount = 0;
+
         final int pixelCount = m_terminal.getWidth() * m_terminal.getHeight();
         FloatBuffer buffer = BufferUtils.createFloatBuffer( pixelCount * VERTICES_PER_PIXEL * VERTEX_SIZE );
 
@@ -110,7 +140,11 @@ public class TerminalRenderer implements Closeable
                 }
 
                 float[] bgColour = getRowColour( m_terminal, rowBg, x );
-                addRectangle( buffer, rx, ry, rw, rh, bgColour, 0.999f, 0.999f, 0.999f, 0.999f );
+                addRectangle( buffer, rx, ry, 0.0f, rw, rh, bgColour, 0.999f, 0.999f, 0.999f, 0.999f );
+
+                float[] fgColour = getRowColour( m_terminal, rowFg, x );
+                char c = rowTxt.charAt( x );
+                addCharacter( buffer, x, y, 0.001f, 1.0f, 1.0f, fgColour, c);
             }
         }
 
@@ -135,13 +169,13 @@ public class TerminalRenderer implements Closeable
         glBindBuffer( GL_ARRAY_BUFFER, m_vertexBuffer );
 
         glEnableClientState( GL_VERTEX_ARRAY );
-        glVertexPointer( 2, GL_FLOAT, VERTEX_SIZE, 0L );
+        glVertexPointer( 3, GL_FLOAT, VERTEX_SIZE, 0L );
 
         glEnableClientState( GL_TEXTURE_COORD_ARRAY );
-        glTexCoordPointer( 2, GL_FLOAT, VERTEX_SIZE, 2 * 4L );
+        glTexCoordPointer( 2, GL_FLOAT, VERTEX_SIZE, 3 * 4L );
 
         glEnableClientState( GL_COLOR_ARRAY );
-        glColorPointer( 3, GL_FLOAT, VERTEX_SIZE, (2 + 2) * 4L );
+        glColorPointer( 3, GL_FLOAT, VERTEX_SIZE, (3 + 2) * 4L );
     }
 
     private void destroyClientState()
@@ -171,7 +205,7 @@ public class TerminalRenderer implements Closeable
         setupClientState();
         {
             mc.getTextureManager().bindTexture( FixedWidthFontRenderer.font );
-            glDrawArrays( GL_TRIANGLES, 0, VERTICES_PER_PIXEL * m_terminal.getWidth() * m_terminal.getHeight() );
+            glDrawArrays( GL_TRIANGLES, 0, m_vertexCount );
         }
         destroyClientState();
     }
