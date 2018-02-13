@@ -47,7 +47,7 @@ public class TerminalRenderer implements Closeable
     }
 
     private static final int VERTEX_SIZE = 8 * 4; // x, y, z, u, v, r, g, b
-    private final static int VERTICES_PER_PIXEL = 4;
+    private final static int VERTICES_PER_PIXEL = 6;
 
     private FloatBuffer buildTerminalBuffer()
     {
@@ -122,15 +122,20 @@ public class TerminalRenderer implements Closeable
 
         GlStateManager.pushMatrix();
         GlStateManager.translate( posX, posY, posZ );
-        GlStateManager.rotate( yaw, 0.0f, 1.0f, 0.0f );
+        GlStateManager.rotate( -yaw, 0.0f, 1.0f, 0.0f );
         GlStateManager.rotate( pitch, 1.0f, 0.0f, 0.0f );
 
+        GlStateManager.disableLighting();
+        mc.entityRenderer.disableLightmap();
         setupClientState();
+
         {
             mc.getTextureManager().bindTexture( FixedWidthFontRenderer.background );
             glDrawArrays( GL_TRIANGLES, 0, VERTICES_PER_PIXEL * m_terminal.getWidth() * m_terminal.getHeight() );
         }
         destroyClientState();
+        mc.entityRenderer.enableLightmap();
+        GlStateManager.enableLighting();
 
         GlStateManager.popMatrix();
     }
