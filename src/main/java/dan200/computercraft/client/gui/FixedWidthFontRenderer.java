@@ -20,8 +20,7 @@ import java.util.Arrays;
 
 public class FixedWidthFontRenderer
 {
-    private static ResourceLocation font = new ResourceLocation( "computercraft", "textures/gui/term_font.png" );
-    public static ResourceLocation background = new ResourceLocation( "computercraft", "textures/gui/term_background.png" );
+    public static ResourceLocation font = new ResourceLocation( "computercraft", "textures/gui/term_font.png" );
 
     public static int FONT_HEIGHT = 9;
     public static int FONT_WIDTH = 6;
@@ -157,7 +156,7 @@ public class FixedWidthFontRenderer
         if( backgroundColour != null )
         {
             // Bind the background texture
-            m_textureManager.bindTexture( background );
+            //m_textureManager.bindTexture( background );
 
             // Draw the quads
             drawStringBackgroundPart( x, y, backgroundColour, leftMarginSize, rightMarginSize, greyScale, p );

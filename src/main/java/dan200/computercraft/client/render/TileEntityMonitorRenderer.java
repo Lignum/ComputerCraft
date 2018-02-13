@@ -92,14 +92,20 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
             return;
         }
 
+        final int width = terminal.getWidth();
+        final int height = terminal.getHeight();
+
+        final double xScale = xSize / (double)width;
+        final double yScale = ySize / (double)height;
+
         if( origin.m_renderer == null )
         {
-            origin.m_renderer = new TerminalRenderer( terminal );
+            origin.m_renderer = new TerminalRenderer( terminal, xScale, yScale );
         }
 
         if( origin.pollChanged() )
         {
-            origin.m_renderer.refreshTerminalBuffer();
+            origin.m_renderer.refreshTerminalBuffer( xScale, yScale );
         }
 
         GlStateManager.pushMatrix();
@@ -111,14 +117,7 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
             ((double)origin.getHeight() - 0.5) - (TileMonitor.RENDER_BORDER + TileMonitor.RENDER_MARGIN),
             0.5
         );
-
-        final int width = terminal.getWidth();
-        final int height = terminal.getHeight();
-
-        final double xScale = xSize / (double)width;
-        final double yScale = ySize / (double)height;
-
-        GlStateManager.scale( xScale, -yScale, 1.0 );
+        GlStateManager.scale( xScale, -yScale, 1.0f );
 
         GlStateManager.disableLighting();
         mc.entityRenderer.disableLightmap();

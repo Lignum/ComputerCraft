@@ -3,8 +3,8 @@ package dan200.computercraft.client.render;
 import dan200.computercraft.client.gui.FixedWidthFontRenderer;
 import dan200.computercraft.core.terminal.Terminal;
 import dan200.computercraft.core.terminal.TextBuffer;
+import dan200.computercraft.shared.peripheral.monitor.TileMonitor;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.GlStateManager;
 import org.lwjgl.BufferUtils;
 
 import java.io.Closeable;
@@ -17,17 +17,18 @@ public class TerminalRenderer implements Closeable
 {
     private final Terminal m_terminal;
     private final int m_vertexBuffer;
+    private double m_xScale, m_yScale;
     private boolean m_closed = false;
 
-    public TerminalRenderer( Terminal terminal )
+    public TerminalRenderer( Terminal terminal, double xScale, double yScale )
     {
         m_terminal = terminal;
         m_vertexBuffer = glGenBuffers();
 
-        refreshTerminalBuffer();
+        refreshTerminalBuffer( xScale, yScale );
     }
 
-    private void uploadTerminalBuffer(FloatBuffer buffer)
+    private void uploadTerminalBuffer( FloatBuffer buffer )
     {
         glBindBuffer( GL_ARRAY_BUFFER, m_vertexBuffer );
         glBufferData( GL_ARRAY_BUFFER, buffer, GL_DYNAMIC_DRAW );
@@ -36,7 +37,7 @@ public class TerminalRenderer implements Closeable
     private static float[] getRowColour( Terminal terminal, TextBuffer hexString, int x )
     {
         int colour = "0123456789abcdef".indexOf( hexString.charAt( x ) );
-        double[] rgb = terminal.getPalette().getColour( colour );
+        double[] rgb = terminal.getPalette().getColour( 15 - colour );
         float[] frgb = new float[ rgb.length ];
 
         for( int i = 0; i < rgb.length; ++i )
@@ -47,29 +48,69 @@ public class TerminalRenderer implements Closeable
         return frgb;
     }
 
+    private void addRectangle( FloatBuffer buffer, float x, float y, float w, float h, float[] colour, float ua, float va, float ub, float vb )
+    {
+        final float xa = x;
+        final float ya = y;
+        final float xb = xa + w;
+        final float yb = ya + h;
+
+        buffer.put( xa ).put( ya ).put( ua ).put( va ).put( colour ); // Top left
+        buffer.put( xa ).put( yb ).put( ua ).put( vb ).put( colour ); // Bottom left
+        buffer.put( xb ).put( ya ).put( ub ).put( va ).put( colour ); // Top right
+        buffer.put( xb ).put( ya ).put( ub ).put( va ).put( colour ); // Top right
+        buffer.put( xa ).put( yb ).put( ua ).put( vb ).put( colour ); // Bottom left
+        buffer.put( xb ).put( yb ).put( ub ).put( vb ).put( colour ); // Bottom right
+    }
+
     private static final int VERTEX_SIZE = 7 * 4; // x, y, u, v, r, g, b
-    private final static int VERTICES_PER_PIXEL = 6;
+    private static final int VERTICES_PER_PIXEL = 6;
 
     private FloatBuffer buildTerminalBuffer()
     {
         final int pixelCount = m_terminal.getWidth() * m_terminal.getHeight();
         FloatBuffer buffer = BufferUtils.createFloatBuffer( pixelCount * VERTICES_PER_PIXEL * VERTEX_SIZE );
 
-        for ( int y = 0; y < m_terminal.getHeight(); ++y )
+        final float marginX = (float)(TileMonitor.RENDER_MARGIN / m_xScale);
+        final float marginY = (float)(TileMonitor.RENDER_MARGIN / m_yScale);
+
+        for( int y = 0; y < m_terminal.getHeight(); ++y )
         {
             TextBuffer rowBg = m_terminal.getBackgroundColourLine( y );
             TextBuffer rowFg = m_terminal.getTextColourLine( y );
             TextBuffer rowTxt = m_terminal.getLine( y );
 
-            for ( int x = 0; x < m_terminal.getWidth(); ++x )
+            for( int x = 0; x < m_terminal.getWidth(); ++x )
             {
+                float rx = x;
+                float ry = y;
+                float rw = 1.0f;
+                float rh = 1.0f;
+
+                if( x == 0 )
+                {
+                    rx -= marginX;
+                    rw += marginX;
+                }
+
+                if( y == 0 )
+                {
+                    ry -= marginY;
+                    rh += marginY;
+                }
+
+                if( x == m_terminal.getWidth() - 1 )
+                {
+                    rw += marginX;
+                }
+
+                if( y == m_terminal.getHeight() - 1 )
+                {
+                    rh += marginY;
+                }
+
                 float[] bgColour = getRowColour( m_terminal, rowBg, x );
-                buffer.put( (float)x ).put( (float)y ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Top left
-                buffer.put( (float)x ).put( (float)y + 1.0f ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Bottom left
-                buffer.put( (float)x + 1.0f ).put( (float)y ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Top right
-                buffer.put( (float)x + 1.0f ).put( (float)y ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Top right
-                buffer.put( (float)x ).put( (float)y + 1.0f ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Bottom left
-                buffer.put( (float)x + 1.0f ).put( (float)y + 1.0f ).put( 0.0f ).put( 0.0f ).put( bgColour ); // Bottom right
+                addRectangle( buffer, rx, ry, rw, rh, bgColour, 0.999f, 0.999f, 0.999f, 0.999f );
             }
         }
 
@@ -77,13 +118,15 @@ public class TerminalRenderer implements Closeable
         return buffer;
     }
 
-    public void refreshTerminalBuffer()
+    public void refreshTerminalBuffer( double xScale, double yScale )
     {
         if( m_closed )
         {
             return;
         }
 
+        m_xScale = xScale;
+        m_yScale = yScale;
         uploadTerminalBuffer( buildTerminalBuffer() );
     }
 
@@ -121,13 +164,13 @@ public class TerminalRenderer implements Closeable
 
         if( m_terminal.getChanged() )
         {
-            refreshTerminalBuffer();
+            refreshTerminalBuffer( m_xScale, m_yScale );
             m_terminal.clearChanged();
         }
 
         setupClientState();
         {
-            mc.getTextureManager().bindTexture( FixedWidthFontRenderer.background );
+            mc.getTextureManager().bindTexture( FixedWidthFontRenderer.font );
             glDrawArrays( GL_TRIANGLES, 0, VERTICES_PER_PIXEL * m_terminal.getWidth() * m_terminal.getHeight() );
         }
         destroyClientState();
