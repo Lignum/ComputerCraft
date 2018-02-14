@@ -50,10 +50,7 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
         {
             return;
         }
-        else
-        {
-            origin.m_lastRenderFrame = renderFrame;
-        }
+        origin.m_lastRenderFrame = renderFrame;
 
         final Minecraft mc = Minecraft.getMinecraft();
 

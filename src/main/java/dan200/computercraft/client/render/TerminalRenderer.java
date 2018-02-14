@@ -18,10 +18,10 @@ import static org.lwjgl.opengl.GL15.*;
 
 public class TerminalRenderer implements Closeable
 {
-    public static int FONT_HEIGHT = 9;
-    public static int FONT_WIDTH = 6;
+    public static final int FONT_HEIGHT = 9;
+    public static final int FONT_WIDTH = 6;
 
-    public static ResourceLocation font = new ResourceLocation( "computercraft", "textures/gui/term_font.png" );
+    public static final ResourceLocation font = new ResourceLocation( "computercraft", "textures/gui/term_font.png" );
 
     private int m_vertexBuffer = -1;
     private boolean m_closed = false;
