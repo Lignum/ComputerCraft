@@ -5,6 +5,7 @@ import dan200.computercraft.core.terminal.TextBuffer;
 import dan200.computercraft.shared.util.ArrayUtil;
 import dan200.computercraft.shared.util.Palette;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.util.ResourceLocation;
 import org.lwjgl.BufferUtils;
 
@@ -170,7 +171,7 @@ public class TerminalRenderer implements Closeable
         {
             return;
         }
-        
+
         uploadTerminalBuffer( buildTerminalBuffer( terminal, marginX, marginY, showCursor ) );
     }
 
@@ -178,21 +179,21 @@ public class TerminalRenderer implements Closeable
     {
         glBindBuffer( GL_ARRAY_BUFFER, m_vertexBuffer );
 
-        glEnableClientState( GL_VERTEX_ARRAY );
+        GlStateManager.glEnableClientState( GL_VERTEX_ARRAY );
         glVertexPointer( 3, GL_FLOAT, VERTEX_SIZE, 0L );
 
-        glEnableClientState( GL_TEXTURE_COORD_ARRAY );
+        GlStateManager.glEnableClientState( GL_TEXTURE_COORD_ARRAY );
         glTexCoordPointer( 2, GL_FLOAT, VERTEX_SIZE, 3 * 4L );
 
-        glEnableClientState( GL_COLOR_ARRAY );
+        GlStateManager.glEnableClientState( GL_COLOR_ARRAY );
         glColorPointer( 3, GL_FLOAT, VERTEX_SIZE, (3 + 2) * 4L );
     }
 
     private void destroyClientState()
     {
-        glDisableClientState( GL_COLOR_ARRAY );
-        glDisableClientState( GL_TEXTURE_COORD_ARRAY );
-        glDisableClientState( GL_VERTEX_ARRAY );
+        GlStateManager.glDisableClientState( GL_COLOR_ARRAY );
+        GlStateManager.glDisableClientState( GL_TEXTURE_COORD_ARRAY );
+        GlStateManager.glDisableClientState( GL_VERTEX_ARRAY );
 
         glBindBuffer( GL_ARRAY_BUFFER, 0 );
     }
