@@ -98,14 +98,17 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
         final double xScale = xSize / (double)width;
         final double yScale = ySize / (double)height;
 
+        final float marginX = (float)(TileMonitor.RENDER_MARGIN / xScale);
+        final float marginY = (float)(TileMonitor.RENDER_MARGIN / yScale);
+
         if( origin.m_renderer == null )
         {
-            origin.m_renderer = new TerminalRenderer( terminal, xScale, yScale );
+            origin.m_renderer = new TerminalRenderer();
         }
 
         if( origin.pollChanged() )
         {
-            origin.m_renderer.refreshTerminalBuffer( xScale, yScale );
+            origin.m_renderer.refreshTerminalBuffer( terminal, marginX, marginY, false );
         }
 
         GlStateManager.pushMatrix();
@@ -122,7 +125,7 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
         GlStateManager.disableLighting();
         mc.entityRenderer.disableLightmap();
 
-        origin.m_renderer.renderTerminal();
+        origin.m_renderer.renderTerminal( terminal, marginX, marginY, false );
 
         mc.entityRenderer.enableLightmap();
         GlStateManager.enableLighting();

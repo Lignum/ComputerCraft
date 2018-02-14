@@ -76,6 +76,7 @@ public class GuiTurtle extends GuiContainer
     public void onGuiClosed()
     {
         super.onGuiClosed();
+        m_terminalGui.close();
         Keyboard.enableRepeatEvents(false);
     }
 

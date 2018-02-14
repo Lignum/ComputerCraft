@@ -7,6 +7,7 @@
 package dan200.computercraft.client.gui;
 
 import dan200.computercraft.ComputerCraft;
+import dan200.computercraft.client.render.TerminalRenderer;
 import dan200.computercraft.core.terminal.TextBuffer;
 import dan200.computercraft.shared.media.inventory.ContainerHeldItem;
 import dan200.computercraft.shared.media.items.ItemPrintout;
@@ -206,7 +207,7 @@ public class GuiPrintout extends GuiContainer
             {
                 fontRenderer.drawString( m_text[lineIdx], x, y, m_colours[lineIdx], null, 0, 0, false, Palette.DEFAULT );
             }
-            y = y + FixedWidthFontRenderer.FONT_HEIGHT;
+            y = y + TerminalRenderer.FONT_HEIGHT;
         }
     }
 }

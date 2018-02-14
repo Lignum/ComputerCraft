@@ -70,6 +70,7 @@ public class GuiComputer extends GuiContainer
     public void onGuiClosed()
     {
         super.onGuiClosed();
+        m_terminal.close();
         Keyboard.enableRepeatEvents( false );
     }
 

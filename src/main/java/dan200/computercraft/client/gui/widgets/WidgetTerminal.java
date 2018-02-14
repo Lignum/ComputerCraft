@@ -8,6 +8,7 @@ package dan200.computercraft.client.gui.widgets;
 
 import dan200.computercraft.ComputerCraft;
 import dan200.computercraft.client.gui.FixedWidthFontRenderer;
+import dan200.computercraft.client.render.TerminalRenderer;
 import dan200.computercraft.core.terminal.Terminal;
 import dan200.computercraft.core.terminal.TextBuffer;
 import dan200.computercraft.shared.computer.core.IComputer;
@@ -22,11 +23,12 @@ import net.minecraft.util.ResourceLocation;
 import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.util.ArrayList;
 
-public class WidgetTerminal extends Widget
+public class WidgetTerminal extends Widget implements Closeable
 {
-    private static final ResourceLocation background = new ResourceLocation( "computercraft", "textures/gui/term_background.png" );
     private static float TERMINATE_TIME = 0.5f;
 
     private final IComputerContainer m_computer;
@@ -38,6 +40,7 @@ public class WidgetTerminal extends Widget
     private int m_lastClickButton;
     private int m_lastClickX;
     private int m_lastClickY;
+    private boolean m_lastShowCursor;
 
     private boolean m_focus;
     private boolean m_allowFocusLoss;
@@ -50,12 +53,14 @@ public class WidgetTerminal extends Widget
 
     private ArrayList<Integer> m_keysDown;
 
+    private final TerminalRenderer m_renderer;
+
     public WidgetTerminal( int x, int y, int termWidth, int termHeight, IComputerContainer computer, int leftMargin, int rightMargin, int topMargin, int bottomMargin )
     {
         super(
             x, y,
-            leftMargin + rightMargin + termWidth * FixedWidthFontRenderer.FONT_WIDTH,
-            topMargin + bottomMargin + termHeight * FixedWidthFontRenderer.FONT_HEIGHT
+            leftMargin + rightMargin + termWidth * TerminalRenderer.FONT_WIDTH,
+            topMargin + bottomMargin + termHeight * TerminalRenderer.FONT_HEIGHT
         );
 
         m_computer = computer;
@@ -77,6 +82,8 @@ public class WidgetTerminal extends Widget
         m_bottomMargin = bottomMargin;
 
         m_keysDown = new ArrayList<>();
+
+        m_renderer = new TerminalRenderer();
     }
 
     public void setAllowFocusLoss( boolean allowFocusLoss )
@@ -184,8 +191,8 @@ public class WidgetTerminal extends Widget
                     Terminal term = computer.getTerminal();
                     if( term != null )
                     {
-                        int charX = ( mouseX - ( getXPosition() + m_leftMargin ) ) / FixedWidthFontRenderer.FONT_WIDTH;
-                        int charY = ( mouseY - ( getYPosition() + m_topMargin ) ) / FixedWidthFontRenderer.FONT_HEIGHT;
+                        int charX = ( mouseX - ( getXPosition() + m_leftMargin ) ) / TerminalRenderer.FONT_WIDTH;
+                        int charY = ( mouseY - ( getYPosition() + m_topMargin ) ) / TerminalRenderer.FONT_HEIGHT;
                         charX = Math.min( Math.max( charX, 0 ), term.getWidth() - 1 );
                         charY = Math.min( Math.max( charY, 0 ), term.getHeight() - 1 );
 
@@ -240,8 +247,8 @@ public class WidgetTerminal extends Widget
             Terminal term = computer.getTerminal();
             if( term != null )
             {
-                int charX = ( mouseX - (getXPosition() + m_leftMargin)) / FixedWidthFontRenderer.FONT_WIDTH;
-                int charY = ( mouseY - (getYPosition() + m_topMargin)) / FixedWidthFontRenderer.FONT_HEIGHT;
+                int charX = ( mouseX - (getXPosition() + m_leftMargin)) / TerminalRenderer.FONT_WIDTH;
+                int charY = ( mouseY - (getYPosition() + m_topMargin)) / TerminalRenderer.FONT_HEIGHT;
                 charX = Math.min( Math.max( charX, 0 ), term.getWidth() - 1 );
                 charY = Math.min( Math.max( charY, 0 ), term.getHeight() - 1 );
 
@@ -373,75 +380,31 @@ public class WidgetTerminal extends Widget
         {
             // Draw the screen contents
             IComputer computer = m_computer.getComputer();
-            Terminal terminal = ( computer != null ) ? computer.getTerminal() : null;
+            Terminal terminal = computer != null ? computer.getTerminal() : null;
+
             if( terminal != null )
             {
-                // Draw the terminal
-                boolean greyscale = !computer.isColour();
+                boolean showCursor = m_focus && terminal.getCursorBlink() && ComputerCraft.getGlobalCursorBlink();
 
-                Palette palette = terminal.getPalette();
-
-                // Get the data from the terminal first
-                // Unfortunately we have to keep the lock for the whole of drawing, so the text doesn't change under us.
-                FixedWidthFontRenderer fontRenderer = (FixedWidthFontRenderer) ComputerCraft.getFixedWidthFontRenderer();
-                boolean tblink = m_focus && terminal.getCursorBlink() && ComputerCraft.getGlobalCursorBlink();
-                int tw = terminal.getWidth();
-                int th = terminal.getHeight();
-                int tx = terminal.getCursorX();
-                int ty = terminal.getCursorY();
-
-                int x = startX + m_leftMargin;
-                int y = startY + m_topMargin;
-
-                // Draw margins
-                TextBuffer emptyLine = new TextBuffer( ' ', tw );
-                if( m_topMargin > 0 )
+                if( m_lastShowCursor != showCursor || terminal.getChanged() )
                 {
-                    fontRenderer.drawString( emptyLine, x, startY, terminal.getTextColourLine( 0 ), terminal.getBackgroundColourLine( 0 ), m_leftMargin, m_rightMargin, greyscale, palette );
-                }
-                if( m_bottomMargin > 0 )
-                {
-                    fontRenderer.drawString( emptyLine, x, startY + 2 * m_bottomMargin + ( th - 1 ) * FixedWidthFontRenderer.FONT_HEIGHT, terminal.getTextColourLine( th - 1 ), terminal.getBackgroundColourLine( th - 1 ), m_leftMargin, m_rightMargin, greyscale, palette );
+                    m_renderer.refreshTerminalBuffer( terminal, m_leftMargin, m_topMargin, showCursor );
                 }
 
-                // Draw lines
-                for( int line = 0; line < th; ++line )
-                {
-                    TextBuffer text = terminal.getLine( line );
-                    TextBuffer colour = terminal.getTextColourLine( line );
-                    TextBuffer backgroundColour = terminal.getBackgroundColourLine( line );
-                    fontRenderer.drawString( text, x, y, colour, backgroundColour, m_leftMargin, m_rightMargin, greyscale, palette );
-                    y += FixedWidthFontRenderer.FONT_HEIGHT;
-                }
+                GlStateManager.pushMatrix();
+                GlStateManager.translate( startX + m_leftMargin, startY + m_topMargin, 0.0f );
+                GlStateManager.scale( TerminalRenderer.FONT_WIDTH, TerminalRenderer.FONT_HEIGHT, 1.0f );
 
-                if( tblink && tx >= 0 && ty >= 0 && tx < tw && ty < th )
-                {
-                    TextBuffer cursor = new TextBuffer( '_', 1 );
-                    TextBuffer cursorColour = new TextBuffer( "0123456789abcdef".charAt( terminal.getTextColour() ), 1 );
+                m_renderer.renderTerminal(
+                    terminal,
+                    m_leftMargin / (float)TerminalRenderer.FONT_WIDTH,
+                    m_topMargin / (float)TerminalRenderer.FONT_HEIGHT,
+                    showCursor
+                );
 
-                    fontRenderer.drawString(
-                            cursor,
-                            x + FixedWidthFontRenderer.FONT_WIDTH * tx,
-                            startY + m_topMargin + FixedWidthFontRenderer.FONT_HEIGHT * ty,
-                            cursorColour, null,
-                            0, 0,
-                            greyscale,
-                            palette
-                    );
-                }
-            } else
-            {
-                // Draw a black background
-                mc.getTextureManager().bindTexture( background );
-                Colour black = Colour.Black;
-                GlStateManager.color( black.getR(), black.getG(), black.getB(), 1.0f );
-                try
-                {
-                    drawTexturedModalRect( startX, startY, 0, 0, getWidth(), getHeight() );
-                } finally
-                {
-                    GlStateManager.color( 1.0f, 1.0f, 1.0f, 1.0f );
-                }
+                GlStateManager.popMatrix();
+
+                m_lastShowCursor = showCursor;
             }
         }
     }
@@ -449,14 +412,7 @@ public class WidgetTerminal extends Widget
     @Override
     public boolean suppressKeyPress( char c, int k )
     {
-        if( m_focus )
-        {
-            return k != 1; // escape
-        }
-        else
-        {
-            return false;
-        }
+        return m_focus && k != 1;
     }
 
     private void queueEvent( String event )
@@ -475,5 +431,11 @@ public class WidgetTerminal extends Widget
         {
             computer.queueEvent( event, args );
         }
+    }
+
+    @Override
+    public void close()
+    {
+        m_renderer.close();
     }
 }
