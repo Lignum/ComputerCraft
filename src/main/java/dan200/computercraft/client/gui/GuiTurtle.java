@@ -67,7 +67,7 @@ public class GuiTurtle extends GuiContainer
             ComputerCraft.terminalWidth_turtle,
             ComputerCraft.terminalHeight_turtle,
             () -> m_computer,
-            2, 2, 2, 2
+            2, 2
         );
         m_terminalGui.setAllowFocusLoss( false );
     }

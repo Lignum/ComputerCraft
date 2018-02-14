@@ -60,7 +60,7 @@ public class GuiComputer extends GuiContainer
         super.initGui();
         Keyboard.enableRepeatEvents( true );
 
-        m_terminal = new WidgetTerminal( 0, 0, m_termWidth, m_termHeight, () -> m_computer, 2, 2, 2, 2 );
+        m_terminal = new WidgetTerminal( 0, 0, m_termWidth, m_termHeight, () -> m_computer, 2, 2 );
         m_terminal.setAllowFocusLoss( false );
         xSize = m_terminal.getWidth() + 24;
         ySize = m_terminal.getHeight() + 24;

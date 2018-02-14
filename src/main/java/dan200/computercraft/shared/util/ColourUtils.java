@@ -7,6 +7,7 @@ import net.minecraftforge.oredict.OreDictionary;
 import org.apache.commons.lang3.ArrayUtils;
 
 import javax.annotation.Nonnull;
+import java.util.Arrays;
 
 public final class ColourUtils
 {
@@ -71,4 +72,8 @@ public final class ColourUtils
         }
     }
 
+    public static void convertToMonochrome( double[] rgb )
+    {
+        Arrays.fill( rgb, ( rgb[0] + rgb[1] + rgb[2] ) / 3.0f );
+    }
 }

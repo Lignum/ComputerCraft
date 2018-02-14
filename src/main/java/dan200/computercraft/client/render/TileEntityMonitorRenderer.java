@@ -105,15 +105,17 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
                 origin.m_renderer = new TerminalRenderer();
             }
 
+            final boolean greyscale = !clientTerminal.isColour();
+
             if( origin.pollChanged() )
             {
-                origin.m_renderer.refreshTerminalBuffer( terminal, marginX, marginY, false );
+                origin.m_renderer.refreshTerminalBuffer( terminal, marginX, marginY, false, greyscale );
             }
 
             GlStateManager.disableLighting();
             mc.entityRenderer.disableLightmap();
 
-            origin.m_renderer.renderTerminal( terminal, marginX, marginY, false );
+            origin.m_renderer.renderTerminal( terminal, marginX, marginY, false, greyscale );
 
             mc.entityRenderer.enableLightmap();
             GlStateManager.enableLighting();

@@ -8,6 +8,7 @@ package dan200.computercraft.client.gui;
 
 import dan200.computercraft.client.render.TerminalRenderer;
 import dan200.computercraft.core.terminal.TextBuffer;
+import dan200.computercraft.shared.util.ColourUtils;
 import dan200.computercraft.shared.util.Palette;
 import net.minecraft.client.renderer.BufferBuilder;
 import net.minecraft.client.renderer.GlStateManager;
@@ -33,7 +34,7 @@ public class FixedWidthFontRenderer
         double[] colour = p.getColour( 15 - color );
         if(greyscale)
         {
-            TerminalRenderer.greyscaleify( colour );
+            ColourUtils.convertToMonochrome( colour );
         }
         float r = (float)colour[0];
         float g = (float)colour[1];
@@ -55,7 +56,7 @@ public class FixedWidthFontRenderer
         double[] colour = p.getColour( 15 - color );
         if(greyscale)
         {
-            TerminalRenderer.greyscaleify( colour );
+            ColourUtils.convertToMonochrome( colour );
         }
         float r = (float)colour[0];
         float g = (float)colour[1];

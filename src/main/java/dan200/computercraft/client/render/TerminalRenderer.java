@@ -3,6 +3,7 @@ package dan200.computercraft.client.render;
 import dan200.computercraft.core.terminal.Terminal;
 import dan200.computercraft.core.terminal.TextBuffer;
 import dan200.computercraft.shared.util.ArrayUtil;
+import dan200.computercraft.shared.util.ColourUtils;
 import dan200.computercraft.shared.util.Palette;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
@@ -27,11 +28,6 @@ public class TerminalRenderer implements Closeable
     private boolean m_closed = false;
     private int m_vertexCount = 0;
 
-    public static void greyscaleify( double[] rgb )
-    {
-        Arrays.fill( rgb, ( rgb[0] + rgb[1] + rgb[2] ) / 3.0f );
-    }
-
     private void uploadTerminalBuffer( FloatBuffer buffer )
     {
         if( m_vertexBuffer < 0 )
@@ -43,16 +39,22 @@ public class TerminalRenderer implements Closeable
         glBufferData( GL_ARRAY_BUFFER, buffer, GL_DYNAMIC_DRAW );
     }
 
-    private static float[] getColourFromHexChar( Palette palette, char c )
+    private static float[] getColourFromHexChar( Palette palette, char c, boolean greyscale )
     {
         int colour = "0123456789abcdef".indexOf( c );
         double[] rgb = palette.getColour( 15 - colour );
+
+        if( greyscale )
+        {
+            ColourUtils.convertToMonochrome( rgb );
+        }
+
         return ArrayUtil.doubleToFloatArray( rgb );
     }
 
-    private static float[] getRowColour( Palette palette, TextBuffer hexString, int x )
+    private static float[] getRowColour( Palette palette, TextBuffer hexString, int x, boolean greyscale )
     {
-        return getColourFromHexChar( palette, hexString.charAt( x ) );
+        return getColourFromHexChar( palette, hexString.charAt( x ), greyscale );
     }
 
     private void addRectangle( FloatBuffer buffer, float x, float y, float z, float w, float h, float[] colour, float ua, float va, float ub, float vb )
@@ -100,7 +102,7 @@ public class TerminalRenderer implements Closeable
     private static final int VERTEX_SIZE = 8 * 4; // x, y, z, u, v, r, g, b
     private static final int VERTICES_PER_PIXEL = 6;
 
-    private FloatBuffer buildTerminalBuffer( Terminal terminal, float marginX, float marginY, boolean showCursor )
+    private FloatBuffer buildTerminalBuffer( Terminal terminal, float marginX, float marginY, boolean showCursor, boolean greyscale )
     {
         m_vertexCount = 0;
 
@@ -144,10 +146,10 @@ public class TerminalRenderer implements Closeable
                     rh += marginY;
                 }
 
-                float[] bgColour = getRowColour( palette, rowBg, x );
+                float[] bgColour = getRowColour( palette, rowBg, x, greyscale );
                 addRectangle( buffer, rx, ry, 0.0f, rw, rh, bgColour, 0.999f, 0.999f, 0.999f, 0.999f );
 
-                float[] fgColour = getRowColour( palette, rowFg, x );
+                float[] fgColour = getRowColour( palette, rowFg, x, greyscale );
                 char c = rowTxt.charAt( x );
                 addCharacter( buffer, x, y, 0.001f, 1.0f, 1.0f, fgColour, c);
             }
@@ -157,7 +159,14 @@ public class TerminalRenderer implements Closeable
         {
             final int tx = terminal.getCursorX();
             final int ty = terminal.getCursorY();
-            float[] cursorColour = ArrayUtil.doubleToFloatArray( palette.getColour( 15 - terminal.getTextColour() ) );
+            double[] rgb = palette.getColour( 15 - terminal.getTextColour() );
+
+            if( greyscale )
+            {
+                ColourUtils.convertToMonochrome( rgb );
+            }
+
+            float[] cursorColour = ArrayUtil.doubleToFloatArray( rgb );
             addCharacter( buffer, tx, ty, 0.001f, 1.0f, 1.0f, cursorColour, '_' );
         }
 
@@ -165,14 +174,14 @@ public class TerminalRenderer implements Closeable
         return buffer;
     }
 
-    public void refreshTerminalBuffer( Terminal terminal, float marginX, float marginY, boolean showCursor )
+    public void refreshTerminalBuffer( Terminal terminal, float marginX, float marginY, boolean showCursor, boolean greyscale )
     {
         if( m_closed )
         {
             return;
         }
 
-        uploadTerminalBuffer( buildTerminalBuffer( terminal, marginX, marginY, showCursor ) );
+        uploadTerminalBuffer( buildTerminalBuffer( terminal, marginX, marginY, showCursor, greyscale ) );
     }
 
     private void setupClientState()
@@ -198,7 +207,7 @@ public class TerminalRenderer implements Closeable
         glBindBuffer( GL_ARRAY_BUFFER, 0 );
     }
 
-    public void renderTerminal( Terminal terminal, float marginX, float marginY, boolean showCursor )
+    public void renderTerminal( Terminal terminal, float marginX, float marginY, boolean showCursor, boolean greyscale )
     {
         if( m_closed )
         {
@@ -209,7 +218,7 @@ public class TerminalRenderer implements Closeable
 
         if( m_vertexBuffer < 0 )
         {
-            refreshTerminalBuffer( terminal, marginX, marginY, showCursor );
+            refreshTerminalBuffer( terminal, marginX, marginY, showCursor, greyscale );
         }
 
         setupClientState();

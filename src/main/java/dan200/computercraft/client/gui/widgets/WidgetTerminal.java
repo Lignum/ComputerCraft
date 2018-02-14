@@ -47,20 +47,18 @@ public class WidgetTerminal extends Widget implements Closeable
     private boolean m_locked;
 
     private int m_leftMargin;
-    private int m_rightMargin;
     private int m_topMargin;
-    private int m_bottomMargin;
 
     private ArrayList<Integer> m_keysDown;
 
     private final TerminalRenderer m_renderer;
 
-    public WidgetTerminal( int x, int y, int termWidth, int termHeight, IComputerContainer computer, int leftMargin, int rightMargin, int topMargin, int bottomMargin )
+    public WidgetTerminal( int x, int y, int termWidth, int termHeight, IComputerContainer computer, int leftMargin, int topMargin )
     {
         super(
             x, y,
-            leftMargin + rightMargin + termWidth * TerminalRenderer.FONT_WIDTH,
-            topMargin + bottomMargin + termHeight * TerminalRenderer.FONT_HEIGHT
+            leftMargin * 2 + termWidth * TerminalRenderer.FONT_WIDTH,
+            topMargin * 2 + termHeight * TerminalRenderer.FONT_HEIGHT
         );
 
         m_computer = computer;
@@ -77,9 +75,7 @@ public class WidgetTerminal extends Widget implements Closeable
         m_locked = false;
 
         m_leftMargin = leftMargin;
-        m_rightMargin = rightMargin;
         m_topMargin = topMargin;
-        m_bottomMargin = bottomMargin;
 
         m_keysDown = new ArrayList<>();
 
@@ -384,11 +380,12 @@ public class WidgetTerminal extends Widget implements Closeable
 
             if( terminal != null )
             {
-                boolean showCursor = m_focus && terminal.getCursorBlink() && ComputerCraft.getGlobalCursorBlink();
+                final boolean showCursor = m_focus && terminal.getCursorBlink() && ComputerCraft.getGlobalCursorBlink();
+                final boolean greyscale = !computer.isColour();
 
                 if( m_lastShowCursor != showCursor || terminal.getChanged() )
                 {
-                    m_renderer.refreshTerminalBuffer( terminal, m_leftMargin, m_topMargin, showCursor );
+                    m_renderer.refreshTerminalBuffer( terminal, m_leftMargin, m_topMargin, showCursor, greyscale );
                 }
 
                 GlStateManager.pushMatrix();
@@ -399,7 +396,8 @@ public class WidgetTerminal extends Widget implements Closeable
                     terminal,
                     m_leftMargin / (float)TerminalRenderer.FONT_WIDTH,
                     m_topMargin / (float)TerminalRenderer.FONT_HEIGHT,
-                    showCursor
+                    showCursor,
+                    greyscale
                 );
 
                 GlStateManager.popMatrix();
