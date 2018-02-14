@@ -170,8 +170,7 @@ public class TerminalRenderer implements Closeable
         {
             return;
         }
-
-        System.out.println("Refresh terminal buffer");
+        
         uploadTerminalBuffer( buildTerminalBuffer( terminal, marginX, marginY, showCursor ) );
     }
 
@@ -223,7 +222,6 @@ public class TerminalRenderer implements Closeable
     @Override
     public void close()
     {
-        System.out.println("Deleting terminal buffer");
         glDeleteBuffers( m_vertexBuffer );
         m_vertexBuffer = -1;
         m_closed = true;

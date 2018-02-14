@@ -28,10 +28,6 @@ import org.lwjgl.opengl.GL11;
 
 public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMonitor>
 {
-    public TileEntityMonitorRenderer()
-    {
-    }
-
     @Override
     public void render( TileMonitor tileEntity, double posX, double posY, double posZ, float f, int i, float f2 )
     {
@@ -132,4 +128,6 @@ public class TileEntityMonitorRenderer extends TileEntitySpecialRenderer<TileMon
 
         GlStateManager.popMatrix();
     }
+
+
 }

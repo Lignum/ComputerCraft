@@ -94,6 +94,7 @@ public class TileMonitor extends TilePeripheralBase
         }
         if( m_renderer != null )
         {
+            // TODO: destroy() does not get called on the client, hence we have a video memory leak here!!
             m_renderer.close();
         }
     }
