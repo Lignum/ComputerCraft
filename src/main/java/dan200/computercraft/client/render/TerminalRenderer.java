@@ -215,7 +215,7 @@ public class TerminalRenderer implements Closeable
         setupClientState();
         {
             mc.getTextureManager().bindTexture( font );
-            glDrawArrays( GL_TRIANGLES, 0, m_vertexCount );
+            GlStateManager.glDrawArrays( GL_TRIANGLES, 0, m_vertexCount );
         }
         destroyClientState();
     }
